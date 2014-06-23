@@ -119,8 +119,11 @@ my $threshold_chain_id_get = chain '/:tid' => sub {
 };
 
 my $threshold_chain_id_put = chain '/:tid' => sub {
+
+  return status_unsupported_media_type("request occurred without application/json content type")
+    unless (request->headers->content_type eq 'application/json');
   
-  # TODO: work out why default serialisation is screwed
+  # TODO: serialise elegantly dammit!
   my $body = decode_json(request->body);
   for my $field(qw{ check_value failure_time }) {
     
@@ -131,7 +134,8 @@ my $threshold_chain_id_put = chain '/:tid' => sub {
   return status_unprocessable_entity("Bad check_value ". $body->{'check_value'} .". Allowed values are: 10, 15, 20, 25, 30 ")
     unless grep{ $body->{'check_value'} eq $_ } qw(10 15 20 25 30);
 
-  # update threshold here
+  # update threshold here 
+
   return status_ok(var('tid')); 
 };
 

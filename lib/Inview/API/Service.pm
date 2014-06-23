@@ -2,7 +2,8 @@ use Dancer ':syntax';
 use Dancer::Plugin::REST;
 use Dancer::Plugin::Chain;
 
-
+use Data::Dumper;
+use JSON::XS;
 # match /service/<SERVICE ID>
 
 my $service_chain  = chain '/services/:sid' => sub {
@@ -98,29 +99,40 @@ my $threshold_chain = chain '/check_thresholds' => sub {
 };
 
 my $threshold_chain_id = sub {
-    # thresholds from pre-loaded stash
-    my @tld = map { $_ } 
-              grep { $_->{id} eq param('tid') } 
-              @{ var('tlds') };
-    
-    return halt(status_not_found('Threshold id ' . param('tid') . ' not found'))
-        unless @tld;
-    
-    var 'tld' => @tld;
-    var 'tid' => param('tid');
+  # thresholds from pre-loaded stash
+  my @tld = map { $_ } 
+            grep { $_->{id} eq param('tid') } 
+            @{ var('tlds') };
+  
+  return halt(status_not_found('Threshold id ' . param('tid') . ' not found'))
+      unless @tld;
+  
+  var 'tld' => @tld;
+  var 'tid' => param('tid');
 
 };
 
 # matches /<THRESHOLD ID>
 my $threshold_chain_id_get = chain '/:tid' => sub {           
     
-    return status_ok(var('tld'));
+  return status_ok(var('tld'));
 };
 
 my $threshold_chain_id_put = chain '/:tid' => sub {
+  
+  # TODO: work out why default serialisation is screwed
+  my $body = decode_json(request->body);
+  for my $field(qw{ check_value failure_time }) {
     
-# update threshold here
-    return status_updated(var('tid')); 
+    debug Dumper($body);
+    return status_unprocessable_entity("Missing field $field") unless $body->{$field};
+  }
+  
+  return status_unprocessable_entity("Bad check_value ". $body->{'check_value'} .". Allowed values are: 10, 15, 20, 25, 30 ")
+    unless grep{ $body->{'check_value'} eq $_ } qw(10 15 20 25 30);
+
+  # update threshold here
+  return status_ok(var('tid')); 
 };
 
 # dispatch to GET /service/<SERVICE ID>/check_thresholds

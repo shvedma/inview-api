@@ -26,6 +26,7 @@ engines:
     convert_blessed: '1'
 
 template: "simple"
+session: Simple
 
 # template: "template_toolkit"
 # engines:
